@@ -20,7 +20,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_security_group" "alb" {
-  name = var.cluster_name
+  name = ${var.cluster_name}
   # Allow inbound HTTP requests
   ingress {
     from_port   = 80
@@ -40,7 +40,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_launch_configuration" "example" {
   image_id        = "ami-024ea438ab0376a47"
-  instance_type   = var.instance_type
+  instance_type   = "t3.micro"
   security_groups = [aws_security_group.instance.id]
   user_data = templatefile("user_data.sh", {
    server_port = var.server_port
@@ -55,8 +55,13 @@ resource "aws_launch_configuration" "example" {
 resource "aws_autoscaling_group" "example" {
  vpc_zone_identifier = data.aws_subnets.default.ids
  launch_configuration = aws_launch_configuration.example.name
- min_size = var.min_size
- max_size = var.max_size
+ min_size = 2
+ max_size = 10
+ tag {
+ key = "Name"
+ value = "terraform-asg-example"
+ propagate_at_launch = true
+ }
  target_group_arns    = [aws_lb_target_group.asg.arn]
  health_check_type    = "ELB"
 }
@@ -125,7 +130,7 @@ data "terraform_remote_state" "db" {
  backend = "s3"
  config = {
  bucket = var.db_remote_state_bucket
- key = var.db_remote_state_key
+ key = var.db_remote_state_bucket
  region = "ap-northeast-2"
  }
 }
